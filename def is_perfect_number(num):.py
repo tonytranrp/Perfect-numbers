@@ -1,31 +1,37 @@
 import time
-from math import sqrt
 from multiprocessing import Pool, cpu_count
+
+def sum_of_divisors(num):
+    """
+    Calculate the sum of divisors of a number.
+    """
+    if num <= 1:
+        return 0
+    
+    divisors_sum = 1  # 1 is always a divisor
+    sqrt_num = int(num ** 0.5)
+    
+    # Iterate over divisors up to the square root of num
+    for i in range(2, sqrt_num + 1):
+        if num % i == 0:
+            # Add divisor and its corresponding divisor (if they are different)
+            divisors_sum += i
+            if i != num // i:
+                divisors_sum += num // i
+    
+    return divisors_sum
 
 def is_perfect_number(num):
     """
     Check if a number is a perfect number.
     """
-    if num <= 1:
-        return False
-    
-    divisors_sum = 1
-    for i in range(2, int(sqrt(num)) + 1):
-        if num % i == 0:
-            divisors_sum += i
-            if i != num // i:
-                divisors_sum += num // i
-    
-    return divisors_sum == num
+    return sum_of_divisors(num) == num
 
 def find_perfect_numbers(start, end):
     """
     Find perfect numbers within a specified range.
     """
-    perfect_numbers = []
-    for num in range(start, end):
-        if is_perfect_number(num):
-            perfect_numbers.append(num)
+    perfect_numbers = [num for num in range(start, end) if is_perfect_number(num)]
     return perfect_numbers
 
 def main():
