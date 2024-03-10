@@ -1,73 +1,52 @@
 import time
-import math
-import multiprocessing
-import concurrent.futures
+from multiprocessing import Pool, cpu_count
 
-def precompute_primes(prime_limit):
-    """ Precompute primes up to a given limit """
-    sieve = [True] * (prime_limit // 2)
-    for i in range(3, math.isqrt(prime_limit) + 1, 2):
-        if sieve[i // 2]:
-            sieve[i*i // 2::i] = [False] * ((prime_limit - i*i - 1) // (2*i) + 1)
-    return [2] + [2 * i + 1 for i in range(1, prime_limit // 2) if sieve[i]]
+def sum_of_divisors(num):
+    """
+    Calculate the sum of divisors of a number.
+    """
+    if num <= 1:
+        return 0
+    
+    divisors_sum = 1  # 1 is always a divisor
+    sqrt_num = int(num ** 0.5)
+    
+    # Iterate over divisors up to the square root of num
+    for i in range(2, sqrt_num + 1):
+        if num % i == 0:
+            # Add divisor and its corresponding divisor (if they are different)
+            divisors_sum += i
+            if i != num // i:
+                divisors_sum += num // i
+    
+    return divisors_sum
 
-def primes(n):
-    """ Return a list of primes < n """
-    if n <= 2:
-        return []
-    sieve = [True] * (n//2)
-    limit = math.ceil(math.sqrt(n)) + 1
-    for i in range(3, limit, 2):
-        if sieve[i//2]:
-            sieve[i*i//2::i] = [False] * ((n - i*i - 1) // (2*i) + 1)
-    return [2] + [2*i + 1 for i in range(1, n//2) if sieve[i]]
+def is_perfect_number(num):
+    """
+    Check if a number is a perfect number.
+    """
+    return sum_of_divisors(num) == num
 
-def lucas_lehmer(p):
-    ''' The Lucas-Lehmer primality test for Mersenne primes.
-        See https://en.wikipedia.org/wiki/Mersenne_prime#Searching_for_Mersenne_primes
-    '''
-    m = (1 << p) - 1
-    s = 4
-    for i in range(p - 2):
-        s = (s * s - 2) % m
-    return s == 0 and m or 0
-
-def find_perfect_numbers(primes_list):
-    perfect_numbers = []
-    for p in primes_list:
-        m = lucas_lehmer(p)
-        if m:
-            n = m << (p - 1)
-            perfect_number = n * (n + 1) // 2
-            perfect_numbers.append(str(perfect_number))
+def find_perfect_numbers(start, end):
+    """
+    Find perfect numbers within a specified range.
+    """
+    perfect_numbers = [num for num in range(start, end) if is_perfect_number(num)]
     return perfect_numbers
 
 def main():
-    filename = "perfect_numbers.txt"
-    count = 0
+    limit = 1000000
+    num_processes = cpu_count()
+    chunk_size = limit // num_processes
+    pool = Pool(processes=num_processes)
+    
     start_time = time.time()
-
-    # Precompute primes
-    prime_limit = 9973
-    primes_list = precompute_primes(prime_limit)
-
-    # Split primes list into chunks for multiprocessing
-    num_processes = multiprocessing.cpu_count()
-    chunk_size = len(primes_list) // num_processes
-
-    with concurrent.futures.ProcessPoolExecutor(max_workers=num_processes) as executor:
-        results = executor.map(find_perfect_numbers, [primes_list[i:i+chunk_size] for i in range(0, len(primes_list), chunk_size)])
-        perfect_numbers = [num for sublist in results for num in sublist]
-
-    # Write perfect numbers to file
-    with open(filename, "w") as file:
-        file.write("\n".join(perfect_numbers))
-
-    count = len(perfect_numbers)
+    results = pool.starmap(find_perfect_numbers, [(i, i + chunk_size) for i in range(2, limit, chunk_size)])
+    perfect_numbers = [num for sublist in results for num in sublist]
     end_time = time.time()
-    print("Total perfect numbers found:", count)
-    print("Perfect numbers written to", filename)
-    print("Time taken:", end_time - start_time, "seconds")
+    
+    print("Time taken to find perfect numbers within limit:", end_time - start_time, "seconds")
+    print("Perfect numbers within the limit of", limit, "are:", perfect_numbers)
 
 if __name__ == "__main__":
     main()
